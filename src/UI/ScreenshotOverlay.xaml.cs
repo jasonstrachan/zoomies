@@ -6,7 +6,6 @@ using System.Windows;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
-using Microsoft.Extensions.Logging;
 using Zoomies.Core.Input;
 using Zoomies.Core.ScreenCapture;
 using Zoomies.Native;
@@ -15,7 +14,6 @@ namespace Zoomies.UI
 {
     public partial class ScreenshotOverlay : Window
     {
-        private readonly ILogger<ScreenshotOverlay> _logger;
         private readonly GlobalHookManager _hookManager;
         private readonly IScreenCapture _screenCapture;
 
@@ -38,11 +36,9 @@ namespace Zoomies.UI
         private System.Windows.Point _currentPanDirection = new System.Windows.Point(0, 0);
 
         public ScreenshotOverlay(
-            ILogger<ScreenshotOverlay> logger,
             GlobalHookManager hookManager,
             IScreenCapture screenCapture)
         {
-            _logger = logger;
             _hookManager = hookManager;
             _screenCapture = screenCapture;
 
@@ -77,7 +73,6 @@ namespace Zoomies.UI
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Failed to initialize services");
                 ErrorDialog.Show("Initialization Error",
                     "Failed to initialize services.\n\nPlease run as administrator or check that another magnifier app isn't running.",
                     ex);
@@ -94,7 +89,6 @@ namespace Zoomies.UI
             if (_isActive && ActualWidth > 0 && ActualHeight > 0 && !_windowMeasured)
             {
                 _windowMeasured = true;
-                _logger.LogInformation($"Window measurement complete: {ActualWidth}x{ActualHeight}");
                 
                 // Process any queued zoom events
                 ProcessQueuedZoomEvents();
@@ -106,7 +100,6 @@ namespace Zoomies.UI
             while (_queuedZoomEvents.Count > 0)
             {
                 var wheelDelta = _queuedZoomEvents.Dequeue();
-                _logger.LogInformation($"Processing queued zoom event: {wheelDelta}");
                 ZoomAtCursor(wheelDelta);
             }
         }
@@ -116,24 +109,14 @@ namespace Zoomies.UI
             // Get current screen dimensions - capture full screen for proper 1.0x zoom
             var screenBounds = _screenCapture.ScreenBounds;
             
-            // Also get the window dimensions for comparison
-            var windowWidth = SystemParameters.PrimaryScreenWidth;
-            var windowHeight = SystemParameters.PrimaryScreenHeight;
-            
-            _logger.LogInformation($"Screen capture bounds: {screenBounds}");
-            _logger.LogInformation($"WPF screen dimensions: {windowWidth}x{windowHeight}");
-            _logger.LogInformation($"Window dimensions: {ActualWidth}x{ActualHeight}");
-            
             return screenBounds;
         }
 
         private async void OnZoomChanged(object? sender, int wheelDelta)
         {
-            _logger.LogInformation($"OnZoomChanged: wheelDelta={wheelDelta}, _isActive={_isActive}, _currentZoom={_currentZoom:F2}");
 
             if (!_isActive)
             {
-                _logger.LogInformation("First scroll - capturing screen");
                 await CaptureAndShowAsync();
                 return;
             }
@@ -141,12 +124,10 @@ namespace Zoomies.UI
             // Check if window is properly measured before zooming
             if (ActualWidth <= 0 || ActualHeight <= 0 || !_windowMeasured)
             {
-                _logger.LogInformation($"Window not measured yet: {ActualWidth}x{ActualHeight}, measured: {_windowMeasured} - queueing zoom");
                 _queuedZoomEvents.Enqueue(wheelDelta);
                 return;
             }
             
-            _logger.LogInformation("Processing zoom");
             ZoomAtCursor(wheelDelta);
         }
 
@@ -154,7 +135,6 @@ namespace Zoomies.UI
         {
             if (_isActive)
             {
-                _logger.LogInformation("OnHotkeysReleased: hiding screenshot window");
                 Hide();
                 _isActive = false;
                 _windowMeasured = false;
@@ -173,15 +153,11 @@ namespace Zoomies.UI
                 var frame = await _screenCapture.CaptureFrameAsync(captureRegion);
                 if (frame == null)
                 {
-                    _logger.LogWarning("Failed to capture screen");
                     return;
                 }
 
                 // Convert to WPF bitmap (back on UI thread)
                 var bitmap = ConvertToWriteableBitmap(frame);
-                
-                _logger.LogInformation($"Captured frame: {frame.Width}x{frame.Height}");
-                _logger.LogInformation($"Bitmap created: {bitmap.PixelWidth}x{bitmap.PixelHeight}");
                 
                 // Set transforms to 1.0 - defer any zoom until window is stable
                 _currentZoom = 1.0;
@@ -204,13 +180,10 @@ namespace Zoomies.UI
                 }
                 
                 var dpiScale = VisualTreeHelper.GetDpi(this);
-                _logger.LogInformation($"Window shown - Image: {bitmap?.PixelWidth}x{bitmap?.PixelHeight}, Window: {ActualWidth}x{ActualHeight}, DPI: {dpiScale.DpiScaleX}x{dpiScale.DpiScaleY}");
                 
-                _logger.LogInformation($"CaptureAndShow: Starting at {_currentZoom:F2}, async approach (v2.13-Async)");
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error capturing screenshot");
             }
         }
 
@@ -219,16 +192,13 @@ namespace Zoomies.UI
             // Early exit for zoom-out when already at EXACTLY minimum zoom  
             if (wheelDelta < 0 && _currentZoom == MinZoom)
             {
-                _logger.LogInformation("Early exit: already at minimum zoom 1.0");
                 return;
             }
 
-            _logger.LogInformation($"ZoomAtCursor START: wheelDelta={wheelDelta}, _currentZoom={_currentZoom:F2}");
 
             // Get cursor position
             if (!NativeMethods.GetCursorPos(out var cursorPos))
             {
-                _logger.LogWarning("Failed to get cursor position");
                 return;
             }
 
@@ -245,7 +215,6 @@ namespace Zoomies.UI
                 newZoom = Math.Min(MaxZoom, newZoom);
                 if (newZoom != _currentZoom)
                 {
-                    _logger.LogInformation($"Zooming IN: {_currentZoom:F2} -> {newZoom:F2}");
                 }
             }
             else
@@ -254,13 +223,11 @@ namespace Zoomies.UI
                 if (_currentZoom <= 1.0 + ZoomStep)
                 {
                     newZoom = 1.0; // Force exact 1.0 when zooming out from close
-                    _logger.LogInformation($"Zooming OUT (snap to 1.0): {_currentZoom:F2} -> {newZoom:F2}");
                 }
                 else
                 {
                     newZoom = _currentZoom - ZoomStep;
                     newZoom = Math.Max(MinZoom, newZoom);
-                    _logger.LogInformation($"Zooming OUT: {_currentZoom:F2} -> {newZoom:F2}");
                 }
             }
 
@@ -274,7 +241,6 @@ namespace Zoomies.UI
             var image = ScreenshotImage;
             if (image?.Source == null)
             {
-                _logger.LogWarning("No image source available");
                 return;
             }
 
@@ -324,7 +290,6 @@ namespace Zoomies.UI
             // Apply the new pan transform
             PanTransform.X = newPanX;
             PanTransform.Y = newPanY;
-            _logger.LogInformation($"Applied zoom {_currentZoom:F2}, pan X={newPanX:F2}, Y={newPanY:F2}");
 
             UpdateZoomText();
         }

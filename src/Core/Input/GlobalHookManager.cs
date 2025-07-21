@@ -1,14 +1,12 @@
 using System;
 using System.Threading;
 using System.Windows.Threading;
-using Microsoft.Extensions.Logging;
 using Zoomies.Native;
 
 namespace Zoomies.Core.Input
 {
     public class GlobalHookManager : IDisposable
     {
-        private readonly ILogger<GlobalHookManager> _logger;
         private readonly Dispatcher _dispatcher;
 
         private IntPtr _keyboardHook = IntPtr.Zero;
@@ -23,9 +21,8 @@ namespace Zoomies.Core.Input
         public event EventHandler<int>? ZoomChanged;
         public event EventHandler? HotkeysReleased;
 
-        public GlobalHookManager(ILogger<GlobalHookManager> logger, Dispatcher dispatcher)
+        public GlobalHookManager(Dispatcher dispatcher)
         {
-            _logger = logger;
             _dispatcher = dispatcher;
         }
 
@@ -33,7 +30,7 @@ namespace Zoomies.Core.Input
         {
             if (_keyboardHook != IntPtr.Zero || _mouseHook != IntPtr.Zero)
             {
-                _logger.LogWarning("Hooks already initialized");
+                // Hooks already initialized
                 return;
             }
 
@@ -64,7 +61,7 @@ namespace Zoomies.Core.Input
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Failed to initialize global hooks");
+                // Failed to initialize global hooks
                 Cleanup();
                 throw;
             }
@@ -104,7 +101,7 @@ namespace Zoomies.Core.Input
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogError(ex, "Error in keyboard hook callback");
+                    // Error in keyboard hook callback
                     // Don't rethrow - continue with normal hook processing
                 }
             }
@@ -115,7 +112,7 @@ namespace Zoomies.Core.Input
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error calling next hook");
+                // Error calling next hook
                 return IntPtr.Zero;
             }
         }
@@ -142,13 +139,13 @@ namespace Zoomies.Core.Input
                                 }
                                 catch (Exception ex)
                                 {
-                                    _logger.LogError(ex, "Error in zoom changed event handler");
+                                    // Error in zoom changed event handler
                                 }
                             });
                         }
                         catch (Exception ex)
                         {
-                            _logger.LogError(ex, "Error dispatching zoom event");
+                            // Error dispatching zoom event
                         }
 
                         // Consume the event
@@ -157,7 +154,7 @@ namespace Zoomies.Core.Input
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogError(ex, "Error in mouse hook callback");
+                    // Error in mouse hook callback
                 }
             }
 
@@ -167,7 +164,7 @@ namespace Zoomies.Core.Input
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error calling next mouse hook");
+                // Error calling next mouse hook
                 return IntPtr.Zero;
             }
         }
@@ -186,14 +183,14 @@ namespace Zoomies.Core.Input
                         }
                         catch (Exception ex)
                         {
-                            _logger.LogError(ex, "Error in hotkeys released event handler");
+                            // Error in hotkeys released event handler
                         }
                     });
                 }
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error in CheckHotkeysReleased");
+                // Error in CheckHotkeysReleased
             }
         }
 

@@ -3,14 +3,12 @@ using System.Drawing;
 using System.Windows;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
-using Microsoft.Extensions.Logging;
 using Zoomies.Core.ScreenCapture;
 
 namespace Zoomies.Core.Magnification
 {
     public class MagnificationController
     {
-        private readonly ILogger<MagnificationController> _logger;
         private readonly IScreenCapture _screenCapture;
 
         private double _zoomLevel = 2.0;
@@ -31,18 +29,15 @@ namespace Zoomies.Core.Magnification
         public event EventHandler<double>? ZoomLevelChanged;
         public event EventHandler<WriteableBitmap?>? FrameReady;
 
-        public MagnificationController(
-            ILogger<MagnificationController> logger,
-            IScreenCapture screenCapture)
+        public MagnificationController(IScreenCapture screenCapture)
         {
-            _logger = logger;
             _screenCapture = screenCapture;
         }
 
         public void Initialize()
         {
             _screenCapture.Initialize();
-            _logger.LogInformation("Magnification controller initialized");
+            // Magnification controller initialized
         }
 
         public void AdjustZoom(int wheelDelta)
@@ -56,7 +51,7 @@ namespace Zoomies.Core.Magnification
                 ZoomLevel -= _zoomStep;
             }
 
-            _logger.LogDebug("Zoom level adjusted to {ZoomLevel}", _zoomLevel);
+            // Zoom level adjusted
         }
 
         public void CaptureAndMagnify()
@@ -79,7 +74,7 @@ namespace Zoomies.Core.Magnification
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error capturing and magnifying");
+                // Error capturing and magnifying
                 FrameReady?.Invoke(this, null);
             }
         }

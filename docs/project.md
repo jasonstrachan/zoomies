@@ -52,11 +52,6 @@
    - `SetWindowsHookEx` with `WH_KEYBOARD_LL` and `WH_MOUSE_LL`
    - System-wide hotkey detection
 
-3. **Rendering**: WPF overlay window
-   - Transparent, borderless window
-   - Always-on-top behavior
-   - Hardware-accelerated graphics
-
 4. **System Tray**: NotifyIcon component
    - Minimal UI footprint
    - Quick access controls

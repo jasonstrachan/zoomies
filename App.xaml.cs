@@ -2,7 +2,6 @@ using System;
 using System.Threading;
 using System.Windows;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
 
 namespace Zoomies
 {
@@ -37,14 +36,8 @@ namespace Zoomies
                 ConfigureServices(serviceCollection);
                 _serviceProvider = serviceCollection.BuildServiceProvider();
 
-                // Log application startup with version
-                var startupLogger = _serviceProvider.GetRequiredService<ILogger<App>>();
-                var version = System.Reflection.Assembly.GetExecutingAssembly().GetName().Version;
-                startupLogger.LogInformation($"Zoomies v{version} starting up");
-
                 // Create and show main window manually
-                var logger = _serviceProvider.GetRequiredService<ILogger<MainWindow>>();
-                var mainWindow = new MainWindow(logger, _serviceProvider);
+                var mainWindow = new MainWindow(_serviceProvider);
                 mainWindow.Show();
             }
             catch (Exception ex)
@@ -77,14 +70,6 @@ namespace Zoomies
 
         private void ConfigureServices(IServiceCollection services)
         {
-            // Configure logging
-            services.AddLogging(configure =>
-            {
-                configure.AddDebug();
-                configure.AddConsole();
-                configure.SetMinimumLevel(LogLevel.Debug);
-            });
-
             // Register application services
             services.AddSingleton<Core.ScreenCapture.IScreenCapture, Core.ScreenCapture.GdiScreenCapture>();
             services.AddSingleton<Core.Input.GlobalHookManager>();

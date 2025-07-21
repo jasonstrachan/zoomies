@@ -3,7 +3,6 @@ using System.Windows;
 using System.Windows.Input;
 using System.Windows.Media.Imaging;
 using System.Windows.Threading;
-using Microsoft.Extensions.Logging;
 using Zoomies.Core.Input;
 using Zoomies.Core.Magnification;
 using Zoomies.Native;
@@ -12,7 +11,6 @@ namespace Zoomies.UI
 {
     public partial class MagnifierOverlay : Window
     {
-        private readonly ILogger<MagnifierOverlay> _logger;
         private readonly GlobalHookManager _hookManager;
         private readonly MagnificationController _magnificationController;
         private readonly DispatcherTimer _captureTimer;
@@ -20,11 +18,9 @@ namespace Zoomies.UI
         private bool _isActive;
 
         public MagnifierOverlay(
-            ILogger<MagnifierOverlay> logger,
             GlobalHookManager hookManager,
             MagnificationController magnificationController)
         {
-            _logger = logger;
             _hookManager = hookManager;
             _magnificationController = magnificationController;
 
@@ -56,11 +52,11 @@ namespace Zoomies.UI
             {
                 _hookManager.Initialize();
                 _magnificationController.Initialize();
-                _logger.LogInformation("Magnifier overlay initialized");
+                // Magnifier overlay initialized
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Failed to initialize magnifier");
+                // Failed to initialize magnifier
                 MessageBox.Show(
                     "Failed to initialize magnifier. Please run as administrator.",
                     "Initialization Error",
@@ -102,7 +98,7 @@ namespace Zoomies.UI
                 _magnificationController.CaptureAndMagnify();
             }
 
-            _logger.LogDebug("Zoom level changed to {Zoom}", zoomLevel);
+            // Zoom level changed
         }
 
         private void OnFrameReady(object? sender, WriteableBitmap? bitmap)
@@ -121,7 +117,7 @@ namespace Zoomies.UI
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error updating position");
+                // Error updating position
             }
         }
 
@@ -156,7 +152,7 @@ namespace Zoomies.UI
 
             Visibility = Visibility.Visible;
             _captureTimer.Start();
-            _logger.LogInformation("Magnifier activated");
+            // Magnifier activated
         }
 
         public void HideMagnifier()
@@ -164,7 +160,7 @@ namespace Zoomies.UI
             _isActive = false;
             Visibility = Visibility.Hidden;
             _captureTimer.Stop();
-            _logger.LogInformation("Magnifier deactivated");
+            // Magnifier deactivated
         }
 
         protected override void OnClosed(EventArgs e)

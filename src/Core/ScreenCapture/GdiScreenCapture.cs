@@ -2,23 +2,20 @@ using System;
 using System.Drawing;
 using System.Runtime.InteropServices;
 using System.Threading.Tasks;
-using Microsoft.Extensions.Logging;
 using Zoomies.Native;
 
 namespace Zoomies.Core.ScreenCapture
 {
     public class GdiScreenCapture : IScreenCapture
     {
-        private readonly ILogger<GdiScreenCapture> _logger;
         private bool _isInitialized;
         private Rectangle _screenBounds;
 
         public Rectangle ScreenBounds => _screenBounds;
         public bool IsReady => _isInitialized;
 
-        public GdiScreenCapture(ILogger<GdiScreenCapture> logger)
+        public GdiScreenCapture()
         {
-            _logger = logger;
         }
 
         public void Initialize()
@@ -30,12 +27,9 @@ namespace Zoomies.Core.ScreenCapture
                 _screenBounds = new Rectangle(0, 0, screenWidth, screenHeight);
 
                 _isInitialized = true;
-                _logger.LogInformation("GDI screen capture initialized. Screen size: {Width}x{Height}",
-                    screenWidth, screenHeight);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Failed to initialize GDI screen capture");
                 throw;
             }
         }
@@ -44,7 +38,6 @@ namespace Zoomies.Core.ScreenCapture
         {
             if (!_isInitialized)
             {
-                _logger.LogWarning("Attempted to capture before initialization");
                 return null;
             }
 
@@ -69,7 +62,6 @@ namespace Zoomies.Core.ScreenCapture
 
                 if (!success)
                 {
-                    _logger.LogWarning("BitBlt failed");
                     return null;
                 }
 
@@ -93,7 +85,6 @@ namespace Zoomies.Core.ScreenCapture
 
                 if (result == 0)
                 {
-                    _logger.LogWarning("GetDIBits failed");
                     return null;
                 }
 
@@ -101,7 +92,6 @@ namespace Zoomies.Core.ScreenCapture
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error capturing frame");
                 return null;
             }
             finally
@@ -122,7 +112,6 @@ namespace Zoomies.Core.ScreenCapture
         {
             if (!NativeMethods.GetCursorPos(out var cursorPos))
             {
-                _logger.LogWarning("Failed to get cursor position");
                 return null;
             }
 
@@ -161,7 +150,6 @@ namespace Zoomies.Core.ScreenCapture
         public void Dispose()
         {
             _isInitialized = false;
-            _logger.LogDebug("GDI screen capture disposed");
         }
     }
 }

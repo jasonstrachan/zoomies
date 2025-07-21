@@ -1,0 +1,13 @@
+{
+    "version": "1.0",
+    "fileName": "thumb2.png",
+    "width": 21,
+    "height": 21,
+    "columns": 1,
+    "rows": 1,
+    "frames": [
+        {
+            "duration": 80
+        }
+    ]
+}

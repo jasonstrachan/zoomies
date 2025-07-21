@@ -1,0 +1,13 @@
+{
+    "version": "1.0",
+    "fileName": "thumb.png",
+    "width": 174,
+    "height": 199,
+    "columns": 1,
+    "rows": 1,
+    "frames": [
+        {
+            "duration": 80
+        }
+    ]
+}

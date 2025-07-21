@@ -9,16 +9,18 @@
         ShowInTaskbar="False"
         WindowState="Maximized"
         Cursor="Cross"
-        Visibility="Hidden">
+        Visibility="Hidden"
+        MouseMove="Window_MouseMove"
+        MouseLeave="Window_MouseLeave">
     
     <Grid>
         <!-- Main container with clipping to prevent overflow -->
         <Grid ClipToBounds="True">
             <!-- Screenshot image with transforms -->
             <Image x:Name="ScreenshotImage" 
-                   Stretch="Fill"
-                   HorizontalAlignment="Stretch"
-                   VerticalAlignment="Stretch"
+                   Stretch="Uniform"
+                   HorizontalAlignment="Center"
+                   VerticalAlignment="Center"
                    RenderOptions.BitmapScalingMode="HighQuality">
                 <Image.RenderTransform>
                     <TransformGroup>
@@ -50,7 +52,7 @@
                 Background="#CC000000"
                 CornerRadius="5"
                 Padding="15,8">
-            <TextBlock Text="Scroll to zoom • Release Ctrl+Alt to exit" 
+            <TextBlock Text="Scroll to zoom • Move mouse to edges to pan • Release Ctrl+Alt to exit" 
                        Foreground="White" 
                        FontSize="14"/>
         </Border>

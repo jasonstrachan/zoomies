@@ -8,6 +8,9 @@
     <ApplicationIcon>assets/images/thumb2.ico</ApplicationIcon>
     <GenerateAssemblyInfo>true</GenerateAssemblyInfo>
     <GenerateTargetFrameworkAttribute>false</GenerateTargetFrameworkAttribute>
+    <Version>2.14.0</Version>
+    <AssemblyVersion>2.14.0.0</AssemblyVersion>
+    <FileVersion>2.14.0.0</FileVersion>
   </PropertyGroup>
 
   <ItemGroup>

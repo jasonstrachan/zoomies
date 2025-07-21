@@ -37,6 +37,11 @@ namespace Zoomies
                 ConfigureServices(serviceCollection);
                 _serviceProvider = serviceCollection.BuildServiceProvider();
 
+                // Log application startup with version
+                var startupLogger = _serviceProvider.GetRequiredService<ILogger<App>>();
+                var version = System.Reflection.Assembly.GetExecutingAssembly().GetName().Version;
+                startupLogger.LogInformation($"Zoomies v{version} starting up");
+
                 // Create and show main window manually
                 var logger = _serviceProvider.GetRequiredService<ILogger<MainWindow>>();
                 var mainWindow = new MainWindow(logger, _serviceProvider);

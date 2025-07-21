@@ -22,7 +22,7 @@ namespace Zoomies.UI
         private double _currentZoom = 1.0;
         private const double MinZoom = 1.0;
         private const double MaxZoom = 10.0;
-        private const double ZoomStep = 0.75; // Faster zoom increments
+        private const double ZoomStep = 0.5; // Bigger zoom increments
 
         private System.Windows.Point _imageOffset = new System.Windows.Point(0, 0);
         private bool _isActive = false;
@@ -30,6 +30,12 @@ namespace Zoomies.UI
         private bool _windowMeasured = false;
         private bool _skipNextZoom = false;
         private readonly Queue<int> _queuedZoomEvents = new Queue<int>();
+
+        // Edge panning
+        private const int EdgeZoneSize = 50; // Pixels from edge to trigger panning
+        private const double PanSpeed = 60.0; // Pixels per timer tick
+        private System.Windows.Threading.DispatcherTimer? _panTimer;
+        private System.Windows.Point _currentPanDirection = new System.Windows.Point(0, 0);
 
         public ScreenshotOverlay(
             ILogger<ScreenshotOverlay> logger,
@@ -51,6 +57,11 @@ namespace Zoomies.UI
             _hookManager.HotkeysReleased += OnHotkeysReleased;
             Loaded += OnLoaded;
             SizeChanged += OnSizeChanged;
+            
+            // Initialize pan timer
+            _panTimer = new System.Windows.Threading.DispatcherTimer();
+            _panTimer.Interval = TimeSpan.FromMilliseconds(16); // ~60fps
+            _panTimer.Tick += PanTimer_Tick;
         }
 
         private void InitializeServices()
@@ -102,26 +113,18 @@ namespace Zoomies.UI
 
         private Rectangle GetOptimizedCaptureRegion()
         {
-            // Get current screen dimensions
+            // Get current screen dimensions - capture full screen for proper 1.0x zoom
             var screenBounds = _screenCapture.ScreenBounds;
             
-            // Use smaller region for faster initial capture (25% of screen area)
-            int width = Math.Min(screenBounds.Width, screenBounds.Width / 2);
-            int height = Math.Min(screenBounds.Height, screenBounds.Height / 2);
+            // Also get the window dimensions for comparison
+            var windowWidth = SystemParameters.PrimaryScreenWidth;
+            var windowHeight = SystemParameters.PrimaryScreenHeight;
             
-            // Center the region or around cursor if available
-            int x = (screenBounds.Width - width) / 2;
-            int y = (screenBounds.Height - height) / 2;
+            _logger.LogInformation($"Screen capture bounds: {screenBounds}");
+            _logger.LogInformation($"WPF screen dimensions: {windowWidth}x{windowHeight}");
+            _logger.LogInformation($"Window dimensions: {ActualWidth}x{ActualHeight}");
             
-            if (NativeMethods.GetCursorPos(out var cursorPos))
-            {
-                x = Math.Max(0, Math.Min(cursorPos.X - width / 2, screenBounds.Width - width));
-                y = Math.Max(0, Math.Min(cursorPos.Y - height / 2, screenBounds.Height - height));
-            }
-            
-            var region = new Rectangle(x, y, width, height);
-            _logger.LogInformation($"Using optimized capture region: {region} (instead of full screen {screenBounds})");
-            return region;
+            return screenBounds;
         }
 
         private async void OnZoomChanged(object? sender, int wheelDelta)
@@ -176,6 +179,9 @@ namespace Zoomies.UI
 
                 // Convert to WPF bitmap (back on UI thread)
                 var bitmap = ConvertToWriteableBitmap(frame);
+                
+                _logger.LogInformation($"Captured frame: {frame.Width}x{frame.Height}");
+                _logger.LogInformation($"Bitmap created: {bitmap.PixelWidth}x{bitmap.PixelHeight}");
                 
                 // Set transforms to 1.0 - defer any zoom until window is stable
                 _currentZoom = 1.0;
@@ -325,7 +331,7 @@ namespace Zoomies.UI
 
         private void UpdateZoomText()
         {
-            ZoomText.Text = $"{_currentZoom * 100:F1}% (x{_currentZoom:F2})";
+            ZoomText.Text = $"{_currentZoom * 100:F0}% ({_currentZoom:F2}x)";
         }
 
         private WriteableBitmap ConvertToWriteableBitmap(Frame frame)
@@ -362,8 +368,80 @@ namespace Zoomies.UI
             return bitmap;
         }
 
+        private void Window_MouseMove(object sender, MouseEventArgs e)
+        {
+            if (!_isActive || _currentZoom <= 1.0 || _panTimer == null)
+                return;
+
+            var mousePos = e.GetPosition(this);
+            var newPanDirection = new System.Windows.Point(0, 0);
+
+            // Check if mouse is in edge zones
+            if (mousePos.X <= EdgeZoneSize)
+                newPanDirection.X = 1; // Pan right (positive direction)
+            else if (mousePos.X >= ActualWidth - EdgeZoneSize)
+                newPanDirection.X = -1; // Pan left (negative direction)
+
+            if (mousePos.Y <= EdgeZoneSize)
+                newPanDirection.Y = 1; // Pan down (positive direction)
+            else if (mousePos.Y >= ActualHeight - EdgeZoneSize)
+                newPanDirection.Y = -1; // Pan up (negative direction)
+
+            // Update pan direction and timer
+            _currentPanDirection = newPanDirection;
+            
+            if (_currentPanDirection.X != 0 || _currentPanDirection.Y != 0)
+            {
+                if (!_panTimer.IsEnabled)
+                    _panTimer.Start();
+            }
+            else
+            {
+                _panTimer.Stop();
+            }
+        }
+
+        private void Window_MouseLeave(object sender, MouseEventArgs e)
+        {
+            _panTimer?.Stop();
+            _currentPanDirection = new System.Windows.Point(0, 0);
+        }
+
+        private void PanTimer_Tick(object? sender, EventArgs e)
+        {
+            if (_currentZoom <= 1.0 || (_currentPanDirection.X == 0 && _currentPanDirection.Y == 0))
+            {
+                _panTimer?.Stop();
+                return;
+            }
+
+            // Calculate new pan position
+            var currentPanX = PanTransform.X;
+            var currentPanY = PanTransform.Y;
+            
+            var newPanX = currentPanX + (_currentPanDirection.X * PanSpeed);
+            var newPanY = currentPanY + (_currentPanDirection.Y * PanSpeed);
+
+            // Apply bounds checking (same as in ZoomAtCursor)
+            var windowWidth = ActualWidth;
+            var windowHeight = ActualHeight;
+            
+            var maxPanX = windowWidth * (_currentZoom - 1.0) * 0.9;
+            var minPanX = -maxPanX;
+            var maxPanY = windowHeight * (_currentZoom - 1.0) * 0.9;
+            var minPanY = -maxPanY;
+
+            newPanX = Math.Max(minPanX, Math.Min(maxPanX, newPanX));
+            newPanY = Math.Max(minPanY, Math.Min(maxPanY, newPanY));
+
+            // Apply the new pan transform
+            PanTransform.X = newPanX;
+            PanTransform.Y = newPanY;
+        }
+
         protected override void OnClosed(EventArgs e)
         {
+            _panTimer?.Stop();
             _hookManager.Dispose();
             base.OnClosed(e);
         }

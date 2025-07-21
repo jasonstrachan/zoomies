@@ -22,7 +22,8 @@ namespace Zoomies
             // Hide the window initially
             Hide();
 
-            _logger.LogInformation("=== Zoomies v2.13-debug (Async Stutter Fix) ===");
+            var version = System.Reflection.Assembly.GetExecutingAssembly().GetName().Version;
+            _logger.LogInformation($"=== Zoomies v{version} ===");
             _logger.LogInformation("Zoomies main window initialized");
         }
 
